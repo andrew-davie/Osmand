@@ -2,6 +2,16 @@ package net.osmand.plus.views;
 
 import net.osmand.plus.GPXUtilities;
 
+/**
+ * While this is essentially a copy of the WptPt class, it is implemented as a new class for memory
+ * efficiency. The addition of a number of variables (colourARGB, speed, distance, angle) specifically
+ * for the different renderers is not efficiently held in the WptPt class if they are not used.
+ * Similarly, there are a number of variables in the WptPt class which are not required for the
+ * renderers to use, and so savings are made in both directions.
+ * Technically one could combine WptPt and WptPt2 but that would be pretty silly, and completely
+ * misunderstanding the whole POINT of the above comment.
+ */
+
 public class WptPt2 {
 
     public double lat;
@@ -13,10 +23,10 @@ public class WptPt2 {
     public double distance = 0.0;				// cumulative distance, if in a track
     public double angle = 0;
 
-    public WptPt2(double lat, double lon) {
-        this.lat = lat;
-        this.lon = lon;
-    }
+//    public WptPt2(double lat, double lon) {
+//        this.lat = lat;
+//        this.lon = lon;
+//    }
 
     public WptPt2(GPXUtilities.WptPt pt)  {
         lat = pt.lat;

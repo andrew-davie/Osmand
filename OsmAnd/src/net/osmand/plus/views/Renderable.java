@@ -16,21 +16,27 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+
+// Fuck it, I'm going to comment. It's the professional thing to do and this is my code.
+// This code is free to use under whatever licence OsmAnd is using with the proviso that
+// comments are NOT removed. They may be modified to correct errors. Andrew Davie.
+
 public abstract class Renderable {
 
     public enum Priority {
 
         // Format is the NAME and a priority. This is used for prioritising track drawing, which
-        // is sorted according to the priority values (lowest values drawn first).
+        // is sorted according to the priority values (lowest values drawn first and thus UNDER all
+        // the other tracks).
 
-        CURRENT(1000),
-        ALTITUDE(1),
-        SPEED(0),
-        DISTANCE(500),
-        STANDARD(300),
-        ARROWS(600);
+        CURRENT(1000),          // a track currently being recorded
+        ALTITUDE(1),            // banded colour showing relative altitude
+        SPEED(0),               // banded colour showing relative speed
+        DISTANCE(500),          // text-based distance markers
+        STANDARD(300),          // everyday run-of-the-mill GPX track
+        ARROWS(600);            // animating arrows (experimental)
 
-        int priority;
+        private int priority;
         Priority(int priority) {
             this.priority = priority;
         }
@@ -146,6 +152,9 @@ public abstract class Renderable {
     }
 
     protected void basicDraw (Canvas canvas, RotatedTileBox tileBox) {
+
+        // The very minimal draw using the culled array
+        
         canvas.rotate(-tileBox.getRotate(), tileBox.getCenterPixelX(), tileBox.getCenterPixelY());
         QuadRect tileBounds = tileBox.getLatLonBounds();
 
@@ -200,6 +209,10 @@ public abstract class Renderable {
 
     public static class CurrentTrack extends Renderable {
 
+        // The 'CurrentTrack' is a special-case GPX track that is currently being recorded.
+        // Consequently, there is the potential for the original point list to increase in size
+        // as more points are added. This forces the resampling to trigger repetitively.
+
         private boolean forceCull = false;
 
         public CurrentTrack(OsmandMapTileView view, List<GPXUtilities.WptPt> pt, double base) {
@@ -208,8 +221,12 @@ public abstract class Renderable {
 
         @Override protected void startCuller(double newZoom) {
 
-            if ((forceCull && culler != null && culler.getStatus() == AsyncTask.Status.FINISHED)
-                    || zoom != newZoom) {
+            // Determine if we need to call a resample/cull on the original point list
+            // The upshot is that we want to produce a culled list that's more efficient to display
+
+            if ((culler == null || culler.getStatus() == AsyncTask.Status.FINISHED)
+                    && (forceCull || zoom != newZoom) {
+
                 forceCull = false;
                 zoom = newZoom;
                 culler = new AsynchronousResampler.RamerDouglasPeucer(this, Math.pow(2.0, epsilon - zoom));
@@ -220,18 +237,22 @@ public abstract class Renderable {
         @Override public void drawSegment(double zoom, Paint p, Canvas canvas, RotatedTileBox tileBox) {
 
             if (pointSize != points.size()) {
+
+                // The original point list has changed in size (another point in the recorded track
+                // has been plonked on.  So we need to add any new points to the culled list (so
+                // that they are drawn) and also trigger a new resample.
+
                 for (int i = pointSize; i < points.size(); i++) {
                     culled.add(new WptPt2(points.get(i)));
-                    forceCull = true;
                 }
-                updateBounds(points, pointSize);
+                updateBounds(points, pointSize);            // recalculate bounding rectangle with new points
                 forceCull = true;
             }
 
             if (QuadRect.trivialOverlap(tileBox.getLatLonBounds(), trackBounds)) { // is visible?
                 startCuller(zoom);
-                if (culled.size() > 1 ) {
-                    updateLocalPaint(p);
+                if (culled.size() > 1 ) {                   // NOTE that an asyncrhonous cull may be running
+                    updateLocalPaint(p);                    // grab the paint parameters
                     basicDraw(canvas, tileBox);
                 }
             }
